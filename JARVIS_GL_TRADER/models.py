@@ -17,6 +17,7 @@ class Candle:
     low: float
     close: float
     volume: float = 100.0
+    spread: float = 0.0  # MT5 points when the feed provides it; 0 = unknown
 
     @property
     def close_time(self) -> int:

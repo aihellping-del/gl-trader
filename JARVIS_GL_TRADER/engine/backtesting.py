@@ -66,6 +66,34 @@ def backtest_pair(candles, symbol: str, payout: float = config.DEFAULT_PAYOUT,
             "trade_list": trades}
 
 
+def walk_forward(candles, symbol: str, folds: int = 3,
+                 payout: float = config.DEFAULT_PAYOUT,
+                 warmup: int = config.WARMUP_CANDLES) -> dict:
+    """Walk-forward style validation: the candle series is split
+    into `folds` contiguous segments; each segment is backtested
+    with the SAME fixed rules, using the preceding `warmup`
+    candles only as indicator warm-up (their trades are not
+    counted). Every fold is therefore evaluated on data the
+    earlier folds never traded - a sequential out-of-sample
+    check. The engine has no fitted parameters, so nothing is
+    re-trained between folds; consistency ACROSS folds is the
+    signal, not any single fold's win rate."""
+    n = len(candles)
+    if folds < 2 or n < warmup + folds * 30:
+        return {"folds": [], "note": "not enough candles for folds"}
+    seg = n // folds
+    out = []
+    for k in range(folds):
+        start = k * seg
+        end = n if k == folds - 1 else (k + 1) * seg
+        lo = max(0, start - warmup)
+        r = backtest_pair(candles[lo:end], symbol, payout=payout,
+                          warmup=start - lo)
+        out.append({"fold": k + 1, **r["combined"]})
+    return {"folds": out,
+            "note": "fixed rules, sequential out-of-sample folds"}
+
+
 def run_backtest(feed, symbols=None, candles: int = 1500,
                  payout: float = config.DEFAULT_PAYOUT) -> dict:
     report = {}
@@ -78,5 +106,6 @@ def run_backtest(feed, symbols=None, candles: int = 1500,
             continue
         r = backtest_pair(hist, symbol, payout=payout)
         r.pop("trade_list", None)
+        r["walk_forward"] = walk_forward(hist, symbol, payout=payout)
         report[symbol] = r
     return report

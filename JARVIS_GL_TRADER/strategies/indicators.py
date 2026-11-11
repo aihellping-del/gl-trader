@@ -138,3 +138,58 @@ def atr_series(candles, period: int = 14) -> FloatSeries:
         atr = (atr * (period - 1) + trs[j]) / period
         out[j + 1] = atr
     return out
+
+
+def adx_series(candles, period: int = 14) -> FloatSeries:
+    """Wilder ADX over candle objects with .high/.low/.close.
+
+    +DM/-DM and TR are Wilder-smoothed; DX = 100*|+DI - -DI| /
+    (+DI + -DI); ADX is the Wilder average of DX. Values are None
+    until enough data exists (first ADX at index 2*period - 1).
+    ADX measures trend STRENGTH only (0-100), never direction.
+    """
+    n = len(candles)
+    out: FloatSeries = [None] * n
+    if n < 2 * period:
+        return out
+    trs: List[float] = []
+    pdms: List[float] = []
+    mdms: List[float] = []
+    # index j in these lists corresponds to candle index j+1
+    for i in range(1, n):
+        h, low = candles[i].high, candles[i].low
+        ph, pl, pc = (candles[i - 1].high, candles[i - 1].low,
+                      candles[i - 1].close)
+        up = h - ph
+        down = pl - low
+        pdms.append(up if (up > down and up > 0) else 0.0)
+        mdms.append(down if (down > up and down > 0) else 0.0)
+        trs.append(max(h - low, abs(h - pc), abs(low - pc)))
+
+    def _wilder(vals):
+        sm = [None] * len(vals)
+        s = sum(vals[:period])
+        sm[period - 1] = s
+        for j in range(period, len(vals)):
+            s = s - s / period + vals[j]
+            sm[j] = s
+        return sm
+
+    s_tr, s_p, s_m = _wilder(trs), _wilder(pdms), _wilder(mdms)
+    dxs = {}  # candle index -> DX
+    for j in range(period - 1, len(trs)):
+        if not s_tr[j]:
+            continue
+        pdi = 100.0 * s_p[j] / s_tr[j]
+        mdi = 100.0 * s_m[j] / s_tr[j]
+        tot = pdi + mdi
+        dxs[j + 1] = (100.0 * abs(pdi - mdi) / tot) if tot else 0.0
+    keys = sorted(dxs)
+    if len(keys) < period:
+        return out
+    adx = sum(dxs[k] for k in keys[:period]) / period
+    out[keys[period - 1]] = adx
+    for k in keys[period:]:
+        adx = (adx * (period - 1) + dxs[k]) / period
+        out[k] = adx
+    return out

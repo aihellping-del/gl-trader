@@ -21,7 +21,8 @@ tr{cursor:pointer} .disc{color:#fbbf24;font-size:13px}
 <div class="glass"><span id="feedBadge" class="badge demo">…</span>
  <span class="disc">Signals are research, NOT guaranteed. Binary trading is high risk — paper mode only.</span>
  <button id="startBtn">▶ Start</button> <button id="stopBtn">■ Stop</button>
- <label><input type="checkbox" id="mute"> Mute sound</label></div>
+ <label><input type="checkbox" id="mute"> Mute sound</label>
+ <span style="float:right">⏱ M1 candle band hone me: <b id="countdown">--</b>s</span></div>
 <div class="glass"><h2>BEST PAIR</h2><div id="bestPair" class="big">—</div><div id="bestReason"></div></div>
 <div class="glass" id="pinePanel"><h2>🌲 PINE ALERT — Tumhari Script (Minu)</h2><div id="pineBanner">Abhi tak koi Pine alert nahi — EMA 2/6 cross + RSI + EMA 200 wala setup bante hi yahan bada alert aayega aur awaaz bhi bajegi. Ek baar aaya hua alert kabhi gayab nahi hota (band candle par hi banta hai).</div><div id="pineList" style="margin-top:8px"></div></div>
 <div class="grid">
@@ -30,7 +31,7 @@ tr{cursor:pointer} .disc{color:#fbbf24;font-size:13px}
 </div>
 <div class="glass"><h3 id="chartTitle">Chart</h3><div id="chart" style="height:320px"></div></div>
 <div class="grid"><div class="glass"><h3>Paper Stats (PAPER)</h3><div id="stats"></div></div>
-<div class="glass"><h3>Scanner — 9 Pairs</h3><table id="scanTable"><thead><tr><th>Pair</th><th>Price</th><th>Dir</th><th>Power</th><th>Class</th><th>ATR</th></tr></thead><tbody></tbody></table></div></div>
+<div class="glass"><h3>Scanner — 9 Pairs</h3><table id="scanTable"><thead><tr><th>Pair</th><th>Price</th><th>Dir</th><th>Power</th><th>Score</th><th>M15</th><th>ADX</th></tr></thead><tbody></tbody></table></div></div>
 <div class="glass"><h3>Signal History</h3><table id="histTable"><thead><tr><th>Time</th><th>Pair</th><th>Dir</th><th>Power</th></tr></thead><tbody></tbody></table></div>
 <script>
 let chart, series, selected=null, audioCtx=null;
@@ -69,7 +70,7 @@ function render(data){
  st.innerHTML=`Balance: <b>${ps.balance}</b> PAPER · Trades ${ps.trades||0} · W ${ps.wins||0} / L ${ps.losses||0} · Win% ${ps.win_rate?Math.round(ps.win_rate*100):0}% · PnL ${ps.net_pnl}`;
  const tb=document.querySelector('#scanTable tbody'); tb.innerHTML='';
  (data.scan||[]).forEach(r=>{ const s=r.signal||{}; const tr=document.createElement('tr');
-  tr.innerHTML=`<td>${r.symbol}</td><td>${r.price??''}</td><td>${s.direction||''}</td><td>${s.power_score??0}</td><td>${s.classification||''}</td><td>${s.volatility_ok?'OK':'FILTERED'}</td>`;
+  tr.innerHTML=`<td>${r.symbol}${r.stale?' ⏰STALE':''}</td><td>${r.price??''}</td><td>${s.direction||''}</td><td>${s.power_score??0}</td><td>${s.score??''} ${s.score_class||''}</td><td>${(r.m15||{}).trend||''}</td><td>${r.adx??''}</td>`;
   tr.onclick=()=>loadChart(r.symbol); tb.appendChild(tr); });
  const best=data.best; document.getElementById('bestPair').textContent=best?best.symbol:'NO TRADE';
  document.getElementById('bestReason').textContent=data.best_reason||'';
@@ -84,6 +85,7 @@ async function refresh(){ const s=await (await fetch('/api/status')).json();
  render(await (await fetch('/api/scan')).json()); }
 document.getElementById('startBtn').onclick=async()=>{ beep(); await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start'})}); refresh(); };
 document.getElementById('stopBtn').onclick=async()=>{ await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'stop'})}); };
+setInterval(()=>{ const el=document.getElementById('countdown'); if(el) el.textContent=60-(Math.floor(Date.now()/1000)%60); },500);
 initChart(); refresh();
 const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
 ws.onmessage=e=>{ const m=JSON.parse(e.data); if(m.type==='NEW_SIGNAL'){ beep(); }

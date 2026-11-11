@@ -70,6 +70,32 @@ def create_app(controller) -> FastAPI:
     async def backtest(symbol: str, candles: int = 1500):
         return controller.backtest(symbol, candles=candles)
 
+    # --- V5 spec aliases (same data, spec endpoint names) ---
+    @app.get("/api/scanner")
+    async def scanner():
+        return controller.scan_once()
+
+    @app.get("/api/signals")
+    async def signals():
+        data = controller._last_scan or controller.scan_once()
+        return {"signals": [r.get("signal") for r in data.get("scan", [])
+                            if r.get("signal")],
+                "best": data.get("best"),
+                "pine_alerts": data.get("pine_alerts", [])}
+
+    @app.get("/api/stats")
+    async def stats():
+        return {"status": controller.status(),
+                "paper": controller.paper.stats()}
+
+    @app.post("/api/start")
+    async def start():
+        return controller.start()
+
+    @app.post("/api/stop")
+    async def stop():
+        return controller.stop()
+
     @app.post("/api/control")
     async def control(req: Request):
         body = await req.json()

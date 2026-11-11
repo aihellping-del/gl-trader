@@ -67,14 +67,18 @@ class MT5Feed:
         if self._mt5 is None:
             raise FeedUnavailable("MT5 not connected")
         mt5 = self._mt5
-        tf = mt5.TIMEFRAME_M5 if timeframe == "M5" else mt5.TIMEFRAME_M1
+        tf = {"M5": mt5.TIMEFRAME_M5,
+              "M15": mt5.TIMEFRAME_M15}.get(timeframe, mt5.TIMEFRAME_M1)
         rates = mt5.copy_rates_from_pos(symbol, tf, 0, count + 1)
         if rates is None or len(rates) < 2:
             raise FeedUnavailable(f"MT5 no rates for {symbol}: {mt5.last_error()}")
+        has_spread = "spread" in rates.dtype.names
         candles = [Candle(time=int(r["time"]), open=float(r["open"]),
                           high=float(r["high"]), low=float(r["low"]),
                           close=float(r["close"]),
-                          volume=float(r["tick_volume"])) for r in rates]
+                          volume=float(r["tick_volume"]),
+                          spread=float(r["spread"]) if has_spread else 0.0)
+                   for r in rates]
         return candles[:-1][-count:]  # drop forming candle
 
     def history(self, symbol: str, n: int) -> List[Candle]:
@@ -145,6 +149,10 @@ class SyntheticFeed:
             need = count * 5 + 5
             m1, _ = self._ensure(symbol, need)
             return aggregate_candles(list(m1))[-count:]
+        if timeframe == "M15":
+            need = count * 15 + 15
+            m1, _ = self._ensure(symbol, need)
+            return aggregate_candles(list(m1), 15)[-count:]
         candles, _ = self._ensure(symbol, max(count, 600))
         return list(candles[-count:])
 

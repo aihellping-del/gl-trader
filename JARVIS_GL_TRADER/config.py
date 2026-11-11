@@ -44,6 +44,8 @@ ATR_MIN_PIPS = 1.2
 ATR_MAX_PIPS = 25.0
 WARMUP_CANDLES = 210
 MAX_CANDLES_PER_PAIR = 500  # cache cap - lightweight for 8GB RAM laptops
+MAX_SPREAD_POINTS = 50  # best-pair guard: reject when the feed's spread (MT5 points) exceeds this; 0/unknown spread never rejects
+STALE_SECONDS = 180  # live feed: last closed candle older than this = stale, best-pair rejects it
 
 
 def breakeven_win_rate(payout: float = DEFAULT_PAYOUT) -> float:

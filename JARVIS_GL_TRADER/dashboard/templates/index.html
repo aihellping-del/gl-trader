@@ -4,8 +4,8 @@
 <title>JARVIS GL TRADER — Research Only</title>
 <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-body{background:#0b0f17;color:#e6edf3;font-family:system-ui;margin:0;padding:16px}
-.glass{background:rgba(255,255,255,.06);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px;margin:10px 0}
+body{background:#000;color:#e6edf3;font-family:system-ui;margin:0;padding:16px}
+.glass{background:rgba(255,255,255,.04);border:1px solid rgba(43,255,126,.25);border-radius:14px;padding:14px;margin:10px 0}
 .badge{padding:3px 10px;border-radius:99px;font-weight:700}
 .demo{background:#7a1f1f}.live{background:#14532d}
 button{background:#1f6feb;color:#fff;border:0;border-radius:8px;padding:9px 18px;cursor:pointer;font-size:15px}
@@ -16,13 +16,52 @@ button{background:#1f6feb;color:#fff;border:0;border-radius:8px;padding:9px 18px
 .big{font-size:44px;font-weight:800}
 table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
 tr{cursor:pointer} .disc{color:#fbbf24;font-size:13px}
+/* --- NEXT SIGNAL hero card (neon design, v1.5.0) --- */
+.hero{border:2px solid rgba(43,255,126,.55);border-radius:22px;padding:20px;margin:12px auto;max-width:560px;background:radial-gradient(120% 100% at 50% 0%,rgba(43,255,126,.10),rgba(0,0,0,.2));box-shadow:0 0 34px rgba(43,255,126,.22),inset 0 0 24px rgba(43,255,126,.05)}
+.hero.call{border-color:#2bff7e}.hero.put{border-color:#ff4d5e;box-shadow:0 0 34px rgba(255,77,94,.25)}
+.hero.neutral{border-color:rgba(100,116,139,.6);box-shadow:none}
+.hero-top{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:20px;letter-spacing:.5px}
+.livepill{border:1.5px solid #2bff7e;color:#2bff7e;border-radius:99px;padding:4px 14px;font-size:14px}
+.livepill.demo{border-color:#fbbf24;color:#fbbf24}
+.hero-dir{font-size:76px;font-weight:900;line-height:1.05;margin:8px 0 2px;color:#94a3b8}
+.hero-pill{display:inline-block;border:1.5px solid currentColor;border-radius:99px;padding:4px 16px;font-weight:800;font-size:15px;margin:4px 0 10px}
+.hero-row{display:flex;justify-content:space-between;align-items:baseline;margin:8px 0;font-size:19px}
+.hero-pair{font-size:23px}.hero-pair b{font-size:27px}
+.hero-num{color:#2bff7e;font-weight:800}
+.barwrap{background:#12261a;border-radius:99px;height:16px;overflow:hidden;margin:4px 0 10px}
+.barfill{background:linear-gradient(90deg,#17d964,#2bff7e);height:100%;width:0%;border-radius:99px;box-shadow:0 0 14px rgba(43,255,126,.8);transition:width .4s}
+.timerow{display:flex;justify-content:space-between;align-items:center;border:1.5px solid rgba(43,255,126,.4);border-radius:12px;padding:9px 14px;margin:8px 0;font-weight:700}
+.timerow.red{border-color:rgba(255,77,94,.55)} .timerow .t{font-size:21px;font-weight:800}
+.genbtn{width:100%;background:linear-gradient(180deg,#2bff7e,#12b76a);color:#04150a;font-size:21px;font-weight:900;padding:14px;border-radius:14px;margin:10px 0;box-shadow:0 0 22px rgba(43,255,126,.45)}
+.startbtn{flex:1;background:rgba(43,255,126,.13);border:1.5px solid #2bff7e;color:#2bff7e;font-size:18px;font-weight:800;padding:12px;border-radius:12px}
+.stopbtn{flex:1;background:rgba(255,77,94,.13);border:1.5px solid #ff4d5e;color:#ff808c;font-size:18px;font-weight:800;padding:12px;border-radius:12px}
+.statrow{display:flex;justify-content:space-between;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.07);font-size:18px}
 </style></head><body>
 <h1>JARVIS GL TRADER — Research Only</h1>
 <div class="glass"><span id="feedBadge" class="badge demo">…</span>
  <span class="disc">Signals are research, NOT guaranteed. Binary trading is high risk — paper mode only.</span>
- <button id="startBtn">▶ Start</button> <button id="stopBtn">■ Stop</button>
- <label><input type="checkbox" id="mute"> Mute sound</label>
- <span style="float:right">⏱ M1 candle band hone me: <b id="countdown">--</b>s</span></div>
+ <label><input type="checkbox" id="mute"> Mute sound</label></div>
+
+<div class="hero neutral" id="heroCard">
+ <div class="hero-top"><span>🎯 NEXT SIGNAL</span><span class="livepill demo" id="liveBadge">● DEMO</span></div>
+ <div class="hero-dir" id="heroDir">NO TRADE</div>
+ <span class="hero-pill" id="heroPill" style="color:#94a3b8">—</span>
+ <div class="hero-row hero-pair"><span>BEST PAIR :</span><b id="heroPair">—</b></div>
+ <div class="hero-row"><span>Signal Strength</span><span class="hero-num" id="heroStrength">0%</span></div>
+ <div class="barwrap"><div class="barfill" id="heroBar"></div></div>
+ <div class="hero-row"><span>Power Score</span><span class="hero-num"><span id="heroPower">0.0</span> / 10</span></div>
+ <div class="timerow"><span>🗓 ENTRY TIME (Next Candle)</span><span class="t" id="countdown">00:00:--</span></div>
+ <div class="timerow red"><span>⏱ EXPIRY (1 Minute)</span><span class="t" id="expiryTime" style="color:#ff808c">00:01:--</span></div>
+ <button class="genbtn" id="genBtn">⟳ GENERATE NEW SIGNAL</button>
+ <div style="display:flex;gap:10px"><button class="startbtn" id="startBtn">▶ Start Bot</button><button class="stopbtn" id="stopBtn">■ Stop Bot</button></div>
+ <h3 style="margin:16px 0 4px">📊 BOT STATISTICS (Paper)</h3>
+ <div class="statrow"><span>🎯 Total Signals</span><b id="statTotal">0</b></div>
+ <div class="statrow"><span>✅ Wins</span><b id="statWins">0</b></div>
+ <div class="statrow"><span>❌ Losses</span><b id="statLosses" style="color:#ff808c">0</b></div>
+ <div class="statrow"><span>％ Win Rate</span><b class="hero-num" id="statWinRate">0%</b></div>
+ <div class="statrow"><span>🪙 Net Result</span><b class="hero-num" id="statNet">0</b></div>
+</div>
+
 <div class="glass"><h2>BEST PAIR</h2><div id="bestPair" class="big">—</div><div id="bestReason"></div></div>
 <div class="glass" id="pinePanel"><h2>🌲 PINE ALERT — Tumhari Script (Minu)</h2><div id="pineBanner">Abhi tak koi Pine alert nahi — EMA 2/6 cross + RSI + EMA 200 wala setup bante hi yahan bada alert aayega aur awaaz bhi bajegi. Ek baar aaya hua alert kabhi gayab nahi hota (band candle par hi banta hai).</div><div id="pineList" style="margin-top:8px"></div></div>
 <div class="grid">
@@ -40,7 +79,7 @@ function beep(){ if(document.getElementById('mute').checked) return;
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.frequency.value=880;o.connect(g);g.connect(audioCtx.destination);
   g.gain.value=0.12;o.start();o.stop(audioCtx.currentTime+0.25);}catch(e){} }
-function initChart(){ try{ chart=LightweightCharts.createChart(document.getElementById('chart'),{layout:{background:{color:'#111827'},textColor:'#e6edf3'},width:document.getElementById('chart').clientWidth,height:320});
+function initChart(){ try{ chart=LightweightCharts.createChart(document.getElementById('chart'),{layout:{background:{color:'#0a0f0a'},textColor:'#e6edf3'},width:document.getElementById('chart').clientWidth,height:320});
  series=chart.addCandlestickSeries(); }catch(e){ document.getElementById('chart').textContent='Chart library load nahi hui (internet/CDN) - baaki dashboard chal raha hai.'; } }
 async function loadChart(sym){ selected=sym; document.getElementById('chartTitle').textContent='Chart — '+sym;
  if(!series) return;
@@ -55,6 +94,41 @@ function renderSignal(sig){
    cp.classList.add('neutral');pp.classList.add('neutral'); return; }
  if(sig.direction==='CALL'){ cb.innerHTML=html(sig); pb.textContent='—'; }
  else { pb.innerHTML=html(sig); cb.textContent='—'; } }
+function renderHero(data){
+ const best=data.best, sig=best?best.signal:null;
+ const card=document.getElementById('heroCard'), dir=document.getElementById('heroDir'),
+ pill=document.getElementById('heroPill');
+ card.classList.remove('call','put','neutral');
+ const lb=document.getElementById('liveBadge');
+ const isLive=(data.feed_source||'').indexOf('LIVE')>=0;
+ lb.textContent=isLive?'● LIVE':'● DEMO'; lb.className='livepill'+(isLive?'':' demo');
+ if(!sig||sig.direction==='NO TRADE'){
+  dir.textContent='NO TRADE'; dir.style.color='#94a3b8';
+  pill.textContent='—'; pill.style.color='#94a3b8';
+  document.getElementById('heroPair').textContent='—';
+  document.getElementById('heroStrength').textContent='0%';
+  document.getElementById('heroBar').style.width='0%';
+  document.getElementById('heroPower').textContent='0.0';
+  card.classList.add('neutral');
+ } else {
+  const up=sig.direction==='CALL', col=up?'#2bff7e':'#ff4d5e';
+  dir.textContent=sig.direction+(up?' ↗':' ↘'); dir.style.color=col;
+  pill.textContent=(sig.score_class||sig.classification||'').toUpperCase(); pill.style.color=col;
+  document.getElementById('heroPair').textContent=best.symbol;
+  const s=Math.round(sig.strength_pct||0);
+  document.getElementById('heroStrength').textContent=s+'%';
+  document.getElementById('heroBar').style.width=s+'%';
+  document.getElementById('heroPower').textContent=((sig.score!=null?sig.score:s)/10).toFixed(1);
+  card.classList.add(up?'call':'put');
+ }
+ const ps=data.paper_stats||{};
+ document.getElementById('statTotal').textContent=ps.trades||0;
+ document.getElementById('statWins').textContent=ps.wins||0;
+ document.getElementById('statLosses').textContent=ps.losses||0;
+ document.getElementById('statWinRate').textContent=(ps.win_rate?(ps.win_rate*100).toFixed(1):'0')+'%';
+ const np=ps.net_pnl||0;
+ document.getElementById('statNet').textContent=(np>0?'+':'')+np+' paper';
+}
 let pineSeen=false;
 function showPine(a){ pineSeen=true;
  const p=document.getElementById('pinePanel');
@@ -65,6 +139,7 @@ function renderPine(alerts){ const pl=document.getElementById('pineList'); if(!p
  pl.innerHTML=(alerts||[]).map(a=>`<div>${new Date((a.time||0)*1000).toLocaleTimeString()} — <b>${a.symbol} ${a.direction}</b>${a.rsi!=null?' · RSI '+a.rsi:''}</div>`).join('');
  if(alerts&&alerts.length&&!pineSeen) showPine(alerts[0]); }
 function render(data){
+ renderHero(data);
  renderPine(data.pine_alerts);
  const st=document.getElementById('stats'),ps=data.paper_stats||{};
  st.innerHTML=`Balance: <b>${ps.balance}</b> PAPER · Trades ${ps.trades||0} · W ${ps.wins||0} / L ${ps.losses||0} · Win% ${ps.win_rate?Math.round(ps.win_rate*100):0}% · PnL ${ps.net_pnl}`;
@@ -85,7 +160,11 @@ async function refresh(){ const s=await (await fetch('/api/status')).json();
  render(await (await fetch('/api/scan')).json()); }
 document.getElementById('startBtn').onclick=async()=>{ beep(); await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start'})}); refresh(); };
 document.getElementById('stopBtn').onclick=async()=>{ await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'stop'})}); };
-setInterval(()=>{ const el=document.getElementById('countdown'); if(el) el.textContent=60-(Math.floor(Date.now()/1000)%60); },500);
+document.getElementById('genBtn').onclick=async()=>{ beep(); refresh(); };
+function fmtTimer(s){ return '00:'+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+setInterval(()=>{ const now=Math.floor(Date.now()/1000), toNext=60-(now%60);
+ const c=document.getElementById('countdown'); if(c) c.textContent=fmtTimer(toNext);
+ const x=document.getElementById('expiryTime'); if(x) x.textContent=fmtTimer(toNext+60); },500);
 initChart(); refresh();
 const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
 ws.onmessage=e=>{ const m=JSON.parse(e.data); if(m.type==='NEW_SIGNAL'){ beep(); }

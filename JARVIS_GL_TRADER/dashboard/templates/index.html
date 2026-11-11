@@ -46,7 +46,8 @@ tr{cursor:pointer} .disc{color:#fbbf24;font-size:13px}
  <div class="hero-top"><span>🎯 NEXT SIGNAL</span><span class="livepill demo" id="liveBadge">● DEMO</span></div>
  <div class="hero-dir" id="heroDir">NO TRADE</div>
  <span class="hero-pill" id="heroPill" style="color:#94a3b8">—</span>
- <div class="hero-row hero-pair"><span>BEST PAIR :</span><b id="heroPair">—</b></div>
+ <div class="hero-row hero-pair"><span>TOP PAIR :</span><b id="heroPair">—</b></div>
+ <div id="heroNote" style="color:#fbbf24;font-size:14px;margin:2px 0 6px"></div>
  <div class="hero-row"><span>Signal Strength</span><span class="hero-num" id="heroStrength">0%</span></div>
  <div class="barwrap"><div class="barfill" id="heroBar"></div></div>
  <div class="hero-row"><span>Power Score</span><span class="hero-num"><span id="heroPower">0.0</span> / 10</span></div>
@@ -62,6 +63,7 @@ tr{cursor:pointer} .disc{color:#fbbf24;font-size:13px}
  <div class="statrow"><span>🪙 Net Result</span><b class="hero-num" id="statNet">0</b></div>
 </div>
 
+<div class="glass"><h3>Scanner — 9 Pairs (⭐ = sabse zyada % wala, upar card me dikh raha hai)</h3><table id="scanTable"><thead><tr><th>Pair</th><th>Price</th><th>Dir</th><th>Power</th><th>Score</th><th>M15</th><th>ADX</th></tr></thead><tbody></tbody></table></div>
 <div class="glass"><h2>BEST PAIR</h2><div id="bestPair" class="big">—</div><div id="bestReason"></div></div>
 <div class="glass" id="pinePanel"><h2>🌲 PINE ALERT — Tumhari Script (Minu)</h2><div id="pineBanner">Abhi tak koi Pine alert nahi — EMA 2/6 cross + RSI + EMA 200 wala setup bante hi yahan bada alert aayega aur awaaz bhi bajegi. Ek baar aaya hua alert kabhi gayab nahi hota (band candle par hi banta hai).</div><div id="pineList" style="margin-top:8px"></div></div>
 <div class="grid">
@@ -69,8 +71,7 @@ tr{cursor:pointer} .disc{color:#fbbf24;font-size:13px}
  <div class="glass put" id="putPanel"><h2>▼ PUT</h2><div id="putBody">Waiting…</div></div>
 </div>
 <div class="glass"><h3 id="chartTitle">Chart</h3><div id="chart" style="height:320px"></div></div>
-<div class="grid"><div class="glass"><h3>Paper Stats (PAPER)</h3><div id="stats"></div></div>
-<div class="glass"><h3>Scanner — 9 Pairs</h3><table id="scanTable"><thead><tr><th>Pair</th><th>Price</th><th>Dir</th><th>Power</th><th>Score</th><th>M15</th><th>ADX</th></tr></thead><tbody></tbody></table></div></div>
+<div class="glass"><h3>Paper Stats (PAPER)</h3><div id="stats"></div></div>
 <div class="glass"><h3>Signal History</h3><table id="histTable"><thead><tr><th>Time</th><th>Pair</th><th>Dir</th><th>Power</th></tr></thead><tbody></tbody></table></div>
 <script>
 let chart, series, selected=null, audioCtx=null;
@@ -94,32 +95,53 @@ function renderSignal(sig){
    cp.classList.add('neutral');pp.classList.add('neutral'); return; }
  if(sig.direction==='CALL'){ cb.innerHTML=html(sig); pb.textContent='—'; }
  else { pb.innerHTML=html(sig); cb.textContent='—'; } }
+function topOf(data){ let top=null,tk=-1;
+ (data.scan||[]).forEach(r=>{ const s=r.signal; if(!s) return;
+  const k=(s.score!=null?s.score:(s.strength_pct||0))*100+(s.power_score||0);
+  if(k>tk){ tk=k; top=r; } });
+ return top; }
 function renderHero(data){
- const best=data.best, sig=best?best.signal:null;
+ const best=data.best, top=topOf(data);
+ const isFinal=!!(best&&top&&best.symbol===top.symbol&&best.signal&&
+   (best.signal.direction==='CALL'||best.signal.direction==='PUT'));
+ const src=isFinal?best:top, sig=src?src.signal:null;
  const card=document.getElementById('heroCard'), dir=document.getElementById('heroDir'),
- pill=document.getElementById('heroPill');
+ pill=document.getElementById('heroPill'), note=document.getElementById('heroNote');
  card.classList.remove('call','put','neutral');
  const lb=document.getElementById('liveBadge');
  const isLive=(data.feed_source||'').indexOf('LIVE')>=0;
  lb.textContent=isLive?'● LIVE':'● DEMO'; lb.className='livepill'+(isLive?'':' demo');
- if(!sig||sig.direction==='NO TRADE'){
+ if(!sig){
   dir.textContent='NO TRADE'; dir.style.color='#94a3b8';
   pill.textContent='—'; pill.style.color='#94a3b8';
   document.getElementById('heroPair').textContent='—';
   document.getElementById('heroStrength').textContent='0%';
   document.getElementById('heroBar').style.width='0%';
   document.getElementById('heroPower').textContent='0.0';
+  note.textContent='';
   card.classList.add('neutral');
- } else {
+ } else if(sig.direction==='CALL'||sig.direction==='PUT'){
   const up=sig.direction==='CALL', col=up?'#2bff7e':'#ff4d5e';
   dir.textContent=sig.direction+(up?' ↗':' ↘'); dir.style.color=col;
   pill.textContent=(sig.score_class||sig.classification||'').toUpperCase(); pill.style.color=col;
-  document.getElementById('heroPair').textContent=best.symbol;
+  document.getElementById('heroPair').textContent=src.symbol;
   const s=Math.round(sig.strength_pct||0);
   document.getElementById('heroStrength').textContent=s+'%';
   document.getElementById('heroBar').style.width=s+'%';
   document.getElementById('heroPower').textContent=((sig.score!=null?sig.score:s)/10).toFixed(1);
+  note.textContent=isFinal?'✅ Yehi pakka signal hai — saari jaanchein pass':
+   'Scanner me sabse zyada % wala pair — par abhi pakka signal (Best Pair) nahi bana';
   card.classList.add(up?'call':'put');
+ } else {
+  dir.textContent='NO TRADE'; dir.style.color='#94a3b8';
+  pill.textContent=(sig.score_class||'No Trade').toUpperCase(); pill.style.color='#94a3b8';
+  document.getElementById('heroPair').textContent=src.symbol;
+  const s=Math.round(sig.strength_pct||0);
+  document.getElementById('heroStrength').textContent=s+'%';
+  document.getElementById('heroBar').style.width=s+'%';
+  document.getElementById('heroPower').textContent=((sig.score!=null?sig.score:s)/10).toFixed(1);
+  note.textContent='Ye scanner ka sabse upar wala pair hai — iska faisla bhi abhi NO TRADE hai';
+  card.classList.add('neutral');
  }
  const ps=data.paper_stats||{};
  document.getElementById('statTotal').textContent=ps.trades||0;
@@ -144,8 +166,10 @@ function render(data){
  const st=document.getElementById('stats'),ps=data.paper_stats||{};
  st.innerHTML=`Balance: <b>${ps.balance}</b> PAPER · Trades ${ps.trades||0} · W ${ps.wins||0} / L ${ps.losses||0} · Win% ${ps.win_rate?Math.round(ps.win_rate*100):0}% · PnL ${ps.net_pnl}`;
  const tb=document.querySelector('#scanTable tbody'); tb.innerHTML='';
+ const topR=topOf(data), topSym=topR?topR.symbol:null;
  (data.scan||[]).forEach(r=>{ const s=r.signal||{}; const tr=document.createElement('tr');
-  tr.innerHTML=`<td>${r.symbol}${r.stale?' ⏰STALE':''}</td><td>${r.price??''}</td><td>${s.direction||''}</td><td>${s.power_score??0}</td><td>${s.score??''} ${s.score_class||''}</td><td>${(r.m15||{}).trend||''}</td><td>${r.adx??''}</td>`;
+  if(r.symbol===topSym) tr.style.cssText='font-weight:800;background:rgba(43,255,126,.07)';
+  tr.innerHTML=`<td>${r.symbol===topSym?'⭐ ':''}${r.symbol}${r.stale?' ⏰STALE':''}</td><td>${r.price??''}</td><td>${s.direction||''}</td><td>${s.power_score??0}</td><td>${s.score??''} ${s.score_class||''}</td><td>${(r.m15||{}).trend||''}</td><td>${r.adx??''}</td>`;
   tr.onclick=()=>loadChart(r.symbol); tb.appendChild(tr); });
  const best=data.best; document.getElementById('bestPair').textContent=best?best.symbol:'NO TRADE';
  document.getElementById('bestReason').textContent=data.best_reason||'';

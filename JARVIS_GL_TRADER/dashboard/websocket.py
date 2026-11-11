@@ -45,6 +45,9 @@ async def broadcast_loop(manager: WSManager, controller, interval: float = 5.0):
                         manager._seen_signals.add(key)
                         await manager.broadcast(
                             {"type": "NEW_SIGNAL", "signal": sig})
+                for alert in (data.get("pine_new") or []):
+                    await manager.broadcast(
+                        {"type": "PINE_SIGNAL", "alert": alert})
         except asyncio.CancelledError:
             raise
         except Exception:

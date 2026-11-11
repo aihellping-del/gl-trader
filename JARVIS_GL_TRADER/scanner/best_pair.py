@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from .. import config
 from ..engine import signal_engine
+from ..strategies.pine_minu import alert_message, pine_signal
 
 
 def scan_all(feed, candles_per_pair: int = 300, symbols=None) -> list:
@@ -20,11 +21,29 @@ def scan_all(feed, candles_per_pair: int = 300, symbols=None) -> list:
             results.append({"symbol": symbol, "signal": None,
                             "error": str(exc), "power": 0})
             continue
+        # Owner's Pine Script rules - an independent ALERT channel.
+        # A failure here must never break the main scan.
+        pine = None
+        try:
+            if candles:
+                hit = pine_signal(candles, symbol=symbol)
+                if hit is not None:
+                    pine = {
+                        "direction": "UP" if hit.direction > 0 else "DOWN",
+                        "time": candles[-1].time,
+                        "price": candles[-1].close,
+                        "rsi": hit.extra.get("rsi"),
+                        "reasons": hit.reasons,
+                        "message": alert_message(symbol, hit.direction),
+                    }
+        except Exception:
+            pine = None
         results.append({
             "symbol": symbol,
             "signal": sig.to_dict() if sig else None,
             "power": sig.power_score if sig else 0,
             "price": candles[-1].close if candles else None,
+            "pine": pine,
         })
     results.sort(key=lambda r: r["power"], reverse=True)
     return results

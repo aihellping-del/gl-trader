@@ -23,6 +23,7 @@ JARVIS_GL_TRADER/strategies/__init__.py
 JARVIS_GL_TRADER/strategies/candle_psychology.py
 JARVIS_GL_TRADER/strategies/crt.py
 JARVIS_GL_TRADER/strategies/indicators.py
+JARVIS_GL_TRADER/strategies/pine_minu.py
 START_GL_TRADER.bat
 requirements.txt
 updater.py

@@ -38,6 +38,7 @@ class TraderController:
         self._last_scan = None
         self._backtest_cache = {}
         self._seen = set()
+        self._pine_alerts = []  # latest first, this session only
 
     # -- lifecycle ------------------------------------------------------
     def start(self):
@@ -73,11 +74,27 @@ class TraderController:
             self.paper.settle_due(self.feed)
         except Exception:
             pass
+        # Owner's Pine Script alerts: fire once per (pair, candle,
+        # direction); kept as a session list for the dashboard.
+        pine_new = []
+        for r in results:
+            p = r.get("pine")
+            if not p:
+                continue
+            key = ("PINE", r["symbol"], p["time"], p["direction"])
+            if key not in self._seen:
+                self._seen.add(key)
+                alert = {"symbol": r["symbol"], **p}
+                self._pine_alerts.insert(0, alert)
+                pine_new.append(alert)
+        self._pine_alerts = self._pine_alerts[:20]
         data = {"scan": results,
                 "best": best_entry,
                 "best_reason": best["reason"],
                 "paper_stats": self.paper.stats(),
-                "feed_source": self.feed.source}
+                "feed_source": self.feed.source,
+                "pine_alerts": self._pine_alerts,
+                "pine_new": pine_new}
         self._last_scan = data
         return data
 

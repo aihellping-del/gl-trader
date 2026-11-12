@@ -49,14 +49,14 @@ class PaperTrader:
         self.pending, self.closed = [], []
         self._save()
 
-    def place(self, signal) -> dict:
+    def place(self, signal, source: str = "ENGINE") -> dict:
         s = signal.to_dict() if hasattr(signal, "to_dict") else dict(signal)
         if s.get("direction") not in ("CALL", "PUT"):
             return {"status": "skipped", "reason": "NO TRADE is not placed"}
         trade = {"symbol": s["symbol"], "direction": s["direction"],
                  "entry_price": s["price"], "entry_time": s["time"],
                  "expiry_time": s["time"] + 60, "stake": self.stake,
-                 "power": s.get("power_score")}
+                 "power": s.get("power_score"), "source": source}
         self.pending.append(trade)
         self._save()
         return {"status": "placed", "trade": trade}
@@ -118,21 +118,37 @@ class PaperTrader:
             self._save()
         return out
 
-    def stats(self) -> dict:
-        wins = sum(1 for c in self.closed if c["outcome"] == "WIN")
-        losses = sum(1 for c in self.closed if c["outcome"] == "LOSS")
-        refunds = sum(1 for c in self.closed if c["outcome"] == "REFUND")
+    def stats(self, source: str = None) -> dict:
+        """Paper stats. source=None: combined (original behaviour).
+        source="ENGINE"/"PINE": only that strategy's trades - each
+        tracked against its own start balance so the two strategies
+        can be compared honestly. Trades saved before sources
+        existed count as ENGINE (they were engine trades)."""
+        if source is None:
+            closed, pending = self.closed, self.pending
+            balance = self.balance
+            net_pnl = round(self.balance - config.PAPER_START_BALANCE, 2)
+        else:
+            closed = [c for c in self.closed
+                      if c.get("source", "ENGINE") == source]
+            pending = [t for t in self.pending
+                       if t.get("source", "ENGINE") == source]
+            net_pnl = round(sum(c["pnl"] for c in closed), 2)
+            balance = round(config.PAPER_START_BALANCE + net_pnl, 2)
+        wins = sum(1 for c in closed if c["outcome"] == "WIN")
+        losses = sum(1 for c in closed if c["outcome"] == "LOSS")
+        refunds = sum(1 for c in closed if c["outcome"] == "REFUND")
         decided = wins + losses
         by_pair = {}
-        for c in self.closed:
+        for c in closed:
             p = by_pair.setdefault(c["symbol"], {"trades": 0, "wins": 0, "pnl": 0.0})
             p["trades"] += 1
             p["wins"] += 1 if c["outcome"] == "WIN" else 0
             p["pnl"] = round(p["pnl"] + c["pnl"], 2)
-        return {"mode": "PAPER", "balance": self.balance,
+        return {"mode": "PAPER", "balance": balance,
                 "start_balance": config.PAPER_START_BALANCE,
-                "trades": len(self.closed), "wins": wins, "losses": losses,
-                "refunds": refunds, "pending": len(self.pending),
+                "trades": len(closed), "wins": wins, "losses": losses,
+                "refunds": refunds, "pending": len(pending),
                 "win_rate": round(wins / decided, 4) if decided else 0.0,
-                "net_pnl": round(self.balance - config.PAPER_START_BALANCE, 2),
+                "net_pnl": net_pnl,
                 "by_pair": by_pair}

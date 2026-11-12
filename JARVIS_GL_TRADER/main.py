@@ -87,11 +87,28 @@ class TraderController:
                 alert = {"symbol": r["symbol"], **p}
                 self._pine_alerts.insert(0, alert)
                 pine_new.append(alert)
+                # Owner's choice (2026-11-12): Pine alerts also
+                # count as PAPER trades, in their own PINE ledger
+                # so engine stats stay clean for comparison.
+                # UP -> CALL, DOWN -> PUT, same 1-minute expiry.
+                try:
+                    if alert.get("price") is not None:
+                        self.paper.place(
+                            {"symbol": alert["symbol"],
+                             "direction": "CALL"
+                             if alert["direction"] == "UP" else "PUT",
+                             "price": alert["price"],
+                             "time": alert["time"],
+                             "power_score": None},
+                            source="PINE")
+                except Exception:
+                    pass
         self._pine_alerts = self._pine_alerts[:20]
         data = {"scan": results,
                 "best": best_entry,
                 "best_reason": best["reason"],
-                "paper_stats": self.paper.stats(),
+                "paper_stats": self.paper.stats("ENGINE"),
+                "pine_paper_stats": self.paper.stats("PINE"),
                 "feed_source": self.feed.source,
                 "pine_alerts": self._pine_alerts,
                 "pine_new": pine_new}

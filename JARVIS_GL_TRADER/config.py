@@ -39,7 +39,8 @@ def price_decimals(symbol: str) -> int:
 DEFAULT_PAYOUT = 0.80
 DEFAULT_STAKE = 10.0
 PAPER_START_BALANCE = 1000.0
-MIN_POWER_FOR_BEST = 6
+MIN_POWER_FOR_BEST = 5  # owner lowered 6 -> 5 on 2026-11-12 for more paper signals
+M5_DISAGREE_PENALTY = 1.0  # M5 gate ki sakhti: 1.0 = halka (M5 saath na de to bhi power kam nahi), 0.5 = purana sakht gate (power aadha). Owner chose halka on 2026-11-12.
 ATR_MIN_PIPS = 1.2
 ATR_MAX_PIPS = 25.0
 WARMUP_CANDLES = 210

@@ -196,20 +196,26 @@ def _score(symbol: str, window, m5_candles) -> Optional[Signal]:
         return _no_trade(symbol, last.close, last.time, reasons,
                          components, round(atr_pips, 2), "m5_unavailable")
     if not m5_ok:
-        # Downgrade: halve total; qualifies only if still Strong+.
-        reduced = total * 0.5
-        power_r = int(max(1, min(10, round(abs(reduced)))))
-        reasons.append("M5 confirmation: FAILED (M5 trend disagrees with M1) - power reduced")
-        if power_r < 5:
-            return Signal(symbol=symbol, direction="NO TRADE",
-                          strength_pct=round(abs(reduced) * 10, 1),
-                          power_score=power_r, classification="No Trade",
-                          price=last.close, time=last.time, reasons=reasons,
-                          components=components, atr_pips=round(atr_pips, 2),
-                          volatility_ok=True, filter_reason="m5_failed",
-                          m5_confirmed=False)
-        total = reduced
-        reasons.append("M5 confirmation: FAILED but setup strong enough - kept at reduced power")
+        penalty = getattr(config, "M5_DISAGREE_PENALTY", 0.5)
+        if penalty >= 1.0:
+            # Halka gate (owner setting): disagreement is noted,
+            # power is NOT reduced; m5_confirmed stays False.
+            reasons.append("M5 confirmation: FAILED (M5 trend disagrees with M1) - halka gate ON: power kam nahi hua")
+        else:
+            # Downgrade: reduce total; qualifies only if still Strong+.
+            reduced = total * penalty
+            power_r = int(max(1, min(10, round(abs(reduced)))))
+            reasons.append("M5 confirmation: FAILED (M5 trend disagrees with M1) - power reduced")
+            if power_r < 5:
+                return Signal(symbol=symbol, direction="NO TRADE",
+                              strength_pct=round(abs(reduced) * 10, 1),
+                              power_score=power_r, classification="No Trade",
+                              price=last.close, time=last.time, reasons=reasons,
+                              components=components, atr_pips=round(atr_pips, 2),
+                              volatility_ok=True, filter_reason="m5_failed",
+                              m5_confirmed=False)
+            total = reduced
+            reasons.append("M5 confirmation: FAILED but setup strong enough - kept at reduced power")
     else:
         reasons.append("M5 confirmation: OK (M5 EMA9/21 agrees with M1)")
 
